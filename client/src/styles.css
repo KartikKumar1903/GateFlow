@@ -318,11 +318,19 @@ input[type="time"] {
 }
 
 .subject-list,
-.backlog-list,
 .pyq-grid {
   display: grid;
   gap: 12px;
   margin-top: 18px;
+}
+
+.backlog-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
 }
 
 .subject-row,
@@ -525,12 +533,19 @@ input[type="time"] {
 }
 
 .slot-list,
-.topic-accordion,
 .topic-list,
 .subject-tuning,
 .slot-chips {
   display: grid;
   gap: 12px;
+}
+
+.topic-accordion {
+  display: grid;
+  gap: 12px;
+  max-height: 450px;
+  overflow-y: auto;
+  padding-right: 8px;
 }
 
 .slot-row {
@@ -599,10 +614,9 @@ input[type="time"] {
 }
 
 .subject-pills {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 8px;
-  justify-content: flex-end;
+  justify-items: flex-end;
 }
 
 .subject-pills span {

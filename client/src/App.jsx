@@ -7,9 +7,11 @@ import {
   HeartHandshake,
   LogOut,
   RotateCcw,
+  Settings,
   Sparkles,
   Star,
-  Target
+  Target,
+  X
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { gateSyllabus } from "./gateSyllabus.js";
@@ -166,6 +168,9 @@ function App() {
   const [feedback, setFeedback] = useState("");
   const [coachReply, setCoachReply] = useState("");
   const [editingSlots, setEditingSlots] = useState(false);
+  const [selectedTaskForFeedback, setSelectedTaskForFeedback] = useState("");
+  const [dayEnded, setDayEnded] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const schedule = useMemo(
     () => (profile ? buildSchedule(profile, backlog, taskStatus) : []),
@@ -173,19 +178,36 @@ function App() {
   );
   const pyqQueue = useMemo(() => (profile ? makePyqQueue(profile, pyqState) : []), [profile, pyqState]);
 
-  const saveProfile = (nextProfile) => {
+  const saveProfile = async (nextProfile) => {
     setProfile(nextProfile);
     localStorage.setItem(accountKey(storageKeys.profile, user), JSON.stringify(nextProfile));
+    try {
+      if (user?.profileId) {
+        await fetch(`http://localhost:5000/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nextProfile) });
+      } else if (user?.id && String(user.id).length > 15) { // Ensure it's a mongo ID, not a local timestamp
+        const res = await fetch(`http://localhost:5000/api/profiles`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...nextProfile, userId: user.id }) });
+        const data = await res.json();
+        const updatedUser = { ...user, profileId: data._id };
+        setUser(updatedUser);
+        localStorage.setItem(storageKeys.user, JSON.stringify(updatedUser));
+      }
+    } catch (e) { console.error("Sync failed", e); }
   };
 
   const saveBacklog = (nextBacklog) => {
     setBacklog(nextBacklog);
     localStorage.setItem(accountKey(storageKeys.backlog, user), JSON.stringify(nextBacklog));
+    if (user?.profileId) {
+      fetch(`http://localhost:5000/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ backlog: nextBacklog }) }).catch(e => console.error(e));
+    }
   };
 
   const savePyq = (nextPyq) => {
     setPyqState(nextPyq);
     localStorage.setItem(accountKey(storageKeys.pyq, user), JSON.stringify(nextPyq));
+    if (user?.profileId) {
+      fetch(`http://localhost:5000/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pyqState: nextPyq }) }).catch(e => console.error(e));
+    }
   };
 
   if (!user) {
@@ -202,8 +224,18 @@ function App() {
     );
   }
 
-  if (!profile) {
-    return <OnboardingScreen user={user} saveProfile={saveProfile} />;
+  if (!profile || isEditingProfile) {
+    return (
+      <OnboardingScreen 
+        user={user} 
+        saveProfile={(p) => {
+          saveProfile(p);
+          setIsEditingProfile(false);
+        }}
+        initialProfile={profile}
+        cancel={profile ? () => setIsEditingProfile(false) : undefined}
+      />
+    );
   }
 
   const selectedSubjects = profile.subjects.filter((subject) => subject.selected);
@@ -234,6 +266,13 @@ function App() {
           ? Array.from(new Set([...subject.completedTopics, topic]))
           : subject.completedTopics.filter((item) => item !== topic)
     });
+
+    if (status === "Covered") {
+      const nextBacklog = backlog.filter(item => !(item.subject === subjectName && item.topic === topic));
+      if (nextBacklog.length !== backlog.length) {
+        saveBacklog(nextBacklog);
+      }
+    }
   };
 
   const updateSlot = (index, patch) => {
@@ -269,42 +308,93 @@ function App() {
   };
 
   const markTask = (taskId) => {
+    const isNowCompleted = taskStatus[taskId] !== "completed";
     setTaskStatus((current) => ({
       ...current,
-      [taskId]: current[taskId] === "completed" ? "planned" : "completed"
+      [taskId]: isNowCompleted ? "completed" : "planned"
     }));
+    
+    if (isNowCompleted && user?.profileId) {
+      const targetTask = schedule.find(t => t.id === taskId);
+      if (targetTask) {
+        fetch('http://localhost:5000/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.profileId, subject: targetTask.subject, topic: targetTask.topic, status: "completed", estimatedMinutes: targetTask.duration })
+        }).catch(e => console.error(e));
+      }
+    }
   };
 
   const endDay = () => {
     const missed = schedule.filter((item) => !item.completed && item.mode !== "Covered-topic revision");
-    if (!missed.length) return;
+    const completedTasks = schedule.filter((item) => item.completed);
 
-    saveBacklog([
-      ...missed.map((item) => ({
+    let nextBacklog = [...backlog];
+
+    if (completedTasks.length > 0) {
+      completedTasks.forEach(task => {
+        nextBacklog = nextBacklog.filter(b => !(b.subject === task.subject && b.topic === task.topic));
+      });
+    }
+
+    if (missed.length > 0) {
+      const newBacklogItems = missed.map((item) => ({
         id: `${Date.now()}-${item.id}`,
         subject: item.subject,
         topic: item.topic,
         reason: "Moved automatically because the day ended before completion",
         weight: 2
-      })),
-      ...backlog
-    ]);
-    setTaskStatus({});
+      }));
+
+      nextBacklog = [...newBacklogItems, ...nextBacklog];
+      
+      if (user?.profileId) {
+        newBacklogItems.forEach(item => {
+          fetch('http://localhost:5000/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.profileId, subject: item.subject, topic: item.topic, status: "backlog", missedReason: item.reason })
+          }).catch(e => console.error(e));
+        });
+      }
+    }
+    
+    saveBacklog(nextBacklog);
+    setDayEnded(true);
   };
 
-  const submitFeedback = () => {
+  const startNextDay = () => {
+    setTaskStatus({});
+    setDayEnded(false);
+  };
+
+  const removeBacklogItem = (id) => {
+    saveBacklog(backlog.filter((item) => item.id !== id));
+  };
+
+  const submitFeedback = async () => {
     if (!feedback.trim()) return;
     setCoachReply(reasonResponse(feedback));
-    saveBacklog([
-      {
-        id: Date.now(),
-        subject: schedule[0]?.subject || selectedSubjects[0]?.name,
-        topic: schedule[0]?.topic || "Follow-up study block",
-        reason: feedback,
-        weight: feedback.toLowerCase().includes("confusing") ? 5 : 3
-      },
-      ...backlog
-    ]);
+    
+    const targetTask = schedule.find(t => t.id === selectedTaskForFeedback) || schedule[0];
+    const newBacklogItem = {
+      id: Date.now(),
+      subject: targetTask?.subject || selectedSubjects[0]?.name,
+      topic: targetTask?.topic || "Follow-up study block",
+      reason: feedback,
+      weight: feedback.toLowerCase().includes("confusing") ? 5 : 3
+    };
+    
+    saveBacklog([newBacklogItem, ...backlog]);
+
+    if (user?.profileId) {
+      fetch('http://localhost:5000/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.profileId, message: feedback, subject: newBacklogItem.subject, topic: newBacklogItem.topic })
+      }).catch(e => console.error(e));
+    }
   };
 
   const logout = () => {
@@ -350,48 +440,67 @@ function App() {
               <p className="eyebrow">Adaptive timetable</p>
               <h2>Today&apos;s plan</h2>
             </div>
-            <button onClick={endDay} type="button">
-              <RotateCcw size={17} /> End day
-            </button>
+            {!dayEnded && (
+              <button onClick={endDay} type="button">
+                <RotateCcw size={17} /> End day
+              </button>
+            )}
           </div>
 
-          <div className="timeline">
-            {schedule.map((item) => (
-              <article className={item.completed ? "task completed" : "task"} key={item.id}>
-                <div className="time">
-                  <strong>{item.start}</strong>
-                  <span>{item.end}</span>
-                </div>
-                <div className="task-main">
-                  <div>
-                    <h3>{item.subject}</h3>
-                    <p>{item.topic}</p>
-                    <small>{item.mode}</small>
+          {dayEnded ? (
+            <div className="empty-state" style={{ textAlign: 'center', padding: '40px 20px', display: 'grid', justifyItems: 'center', gap: '10px' }}>
+              <CheckCircle2 size={48} color="#1f5f5b" style={{ margin: '0 auto' }} />
+              <h3 style={{ margin: '0' }}>Day ended successfully!</h3>
+              <p style={{ margin: '0' }}>Your uncompleted tasks have been moved to the priority repair queue. Great job studying today!</p>
+              <button onClick={startNextDay} type="button" style={{ marginTop: '16px' }}>
+                <Sparkles size={17} /> Start Next Day
+              </button>
+            </div>
+          ) : (
+            <div className="timeline">
+              {schedule.map((item) => (
+                <article className={item.completed ? "task completed" : "task"} key={item.id}>
+                  <div className="time">
+                    <strong>{item.start}</strong>
+                    <span>{item.end}</span>
                   </div>
-                  <div className="task-actions">
-                    <div className="task-meta">
-                      <span>{item.duration} min</span>
-                      <span>Priority {item.score}</span>
+                  <div className="task-main">
+                    <div>
+                      <h3>{item.subject}</h3>
+                      <p>{item.topic}</p>
+                      <small>{item.mode}</small>
                     </div>
-                    <button className="ghost-btn" onClick={() => markTask(item.id)} type="button">
-                      <CheckCircle2 size={17} /> {item.completed ? "Studied today" : "Mark studied"}
-                    </button>
+                    <div className="task-actions">
+                      <div className="task-meta">
+                        <span>{item.duration} min</span>
+                        <span>Priority {item.score}</span>
+                      </div>
+                      <button className="ghost-btn" onClick={() => markTask(item.id)} type="button">
+                        <CheckCircle2 size={17} /> {item.completed ? "Studied today" : "Mark studied"}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
 
         <aside className="panel setup">
           <div className="section-title">
             <div>
               <p className="eyebrow">Subject control</p>
-              <h2>Topics and priority</h2>
+              <h2 style={{ marginBottom: !dayEnded ? '4px' : '0' }}>Topics and priority</h2>
+              {!dayEnded && <small style={{ display: 'block', color: '#c46b4f', fontWeight: 650 }}>Locked until you End Day</small>}
             </div>
-            <button className="icon-btn" onClick={logout} title="Log out" type="button">
-              <LogOut size={18} />
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="icon-btn" onClick={() => setIsEditingProfile(true)} title="Edit Setup" type="button">
+                <Settings size={18} />
+              </button>
+              <button className="icon-btn" onClick={logout} title="Log out" type="button">
+                <LogOut size={18} />
+              </button>
+            </div>
           </div>
           <div className="topic-accordion">
             {selectedSubjects.map((subject) => (
@@ -412,6 +521,8 @@ function App() {
                   className={subject.coverFirst ? "choice selected" : "choice"}
                   onClick={() => updateSubject(subject.name, { coverFirst: !subject.coverFirst })}
                   type="button"
+                  disabled={!dayEnded}
+                  title={!dayEnded ? "You can change priority after ending the day" : ""}
                 >
                   <span>Cover this subject first</span>
                   <small>{subject.coverFirst ? "Prioritized" : "Normal priority"}</small>
@@ -423,6 +534,8 @@ function App() {
                       <select
                         value={topicStatusOf(subject, topic)}
                         onChange={(event) => setTopicProgress(subject.name, topic, event.target.value)}
+                        disabled={!dayEnded}
+                        title={!dayEnded ? "You can update progress after ending the day" : ""}
                       >
                         <option>Not started</option>
                         <option>In progress</option>
@@ -525,7 +638,12 @@ function App() {
                     <p>{item.topic}</p>
                     <small>{item.reason}</small>
                   </div>
-                  <span>{item.weight}x</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{item.weight}x</span>
+                    <button className="icon-btn" onClick={() => removeBacklogItem(item.id)} title="Remove from backlog" type="button" style={{ minWidth: '32px', minHeight: '32px', padding: 0 }}>
+                      <X size={16} />
+                    </button>
+                  </div>
                 </article>
               ))
             ) : (
@@ -542,6 +660,16 @@ function App() {
             </div>
             <HeartHandshake size={24} />
           </div>
+          <select 
+            value={selectedTaskForFeedback} 
+            onChange={(e) => setSelectedTaskForFeedback(e.target.value)}
+            style={{ marginBottom: '12px', width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid rgba(90, 110, 103, 0.18)', background: '#fffaf3' }}
+          >
+            <option value="">General note (Assigns to first task)</option>
+            {schedule.map(item => (
+              <option key={item.id} value={item.id}>{item.subject} - {item.topic}</option>
+            ))}
+          </select>
           <textarea
             placeholder="Example: I studied synchronization today, but I still need two more days before marking it covered."
             value={feedback}
@@ -598,19 +726,52 @@ function AuthScreen({
 }) {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
-    const nextUser = {
-      id: Date.now(),
-      name: form.name,
-      email: form.email
-    };
-    localStorage.setItem(storageKeys.user, JSON.stringify(nextUser));
-    setProfile(JSON.parse(localStorage.getItem(accountKey(storageKeys.profile, nextUser)) || "null"));
-    setBacklog(JSON.parse(localStorage.getItem(accountKey(storageKeys.backlog, nextUser)) || "[]"));
-    setPyqState(JSON.parse(localStorage.getItem(accountKey(storageKeys.pyq, nextUser)) || "{}"));
-    setTaskStatus({});
-    setUser(nextUser);
+    try {
+      const endpoint = authMode === "signup" ? "/api/auth/signup" : "/api/auth/login";
+      const response = await fetch(`http://localhost:5000${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: form.name, email: form.email, password: form.password })
+      });
+      if (!response.ok) throw new Error("Auth failed");
+      const data = await response.json();
+      
+      const nextUser = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        profileId: data.profile?._id || data.user.profileId
+      };
+      
+      localStorage.setItem(storageKeys.user, JSON.stringify(nextUser));
+      
+      if (data.profile) {
+        localStorage.setItem(accountKey(storageKeys.profile, nextUser), JSON.stringify(data.profile));
+        if (data.profile.backlog) localStorage.setItem(accountKey(storageKeys.backlog, nextUser), JSON.stringify(data.profile.backlog));
+        if (data.profile.pyqState) localStorage.setItem(accountKey(storageKeys.pyq, nextUser), JSON.stringify(data.profile.pyqState));
+      }
+      
+      setProfile(JSON.parse(localStorage.getItem(accountKey(storageKeys.profile, nextUser)) || "null"));
+      setBacklog(JSON.parse(localStorage.getItem(accountKey(storageKeys.backlog, nextUser)) || "[]"));
+      setPyqState(JSON.parse(localStorage.getItem(accountKey(storageKeys.pyq, nextUser)) || "{}"));
+      setTaskStatus({});
+      setUser(nextUser);
+    } catch (err) {
+      console.error(err);
+      const nextUser = {
+        id: Date.now(),
+        name: form.name,
+        email: form.email
+      };
+      localStorage.setItem(storageKeys.user, JSON.stringify(nextUser));
+      setProfile(JSON.parse(localStorage.getItem(accountKey(storageKeys.profile, nextUser)) || "null"));
+      setBacklog(JSON.parse(localStorage.getItem(accountKey(storageKeys.backlog, nextUser)) || "[]"));
+      setPyqState(JSON.parse(localStorage.getItem(accountKey(storageKeys.pyq, nextUser)) || "{}"));
+      setTaskStatus({});
+      setUser(nextUser);
+    }
   };
 
   return (
@@ -663,20 +824,25 @@ function AuthScreen({
   );
 }
 
-function OnboardingScreen({ user, saveProfile }) {
-  const [comfortableSlots, setComfortableSlots] = useState(defaultSlots);
-  const [subjects, setSubjects] = useState(
-    gateSyllabus.map((section) => ({
-      name: section.name,
-      topics: section.topics,
-      completedTopics: [],
-      topicProgress: {},
-      selected: true,
-      difficulty: section.name === "Theory of Computation" || section.name === "Algorithms" ? 5 : 3,
-      favorite: 3,
-      coverFirst: false
-    }))
-  );
+function OnboardingScreen({ user, saveProfile, initialProfile, cancel }) {
+  const [comfortableSlots, setComfortableSlots] = useState(initialProfile?.comfortableSlots || defaultSlots);
+  const [subjects, setSubjects] = useState(() => {
+    return gateSyllabus.map((section) => {
+      const existing = initialProfile?.subjects?.find(s => s.name === section.name);
+      if (existing) return { ...existing, selected: true };
+      
+      return {
+        name: section.name,
+        topics: section.topics,
+        completedTopics: [],
+        topicProgress: {},
+        selected: !initialProfile,
+        difficulty: section.name === "Theory of Computation" || section.name === "Algorithms" ? 5 : 3,
+        favorite: 3,
+        coverFirst: false
+      };
+    });
+  });
 
   const updateSubject = (name, patch) => {
     setSubjects((current) =>
@@ -728,9 +894,9 @@ function OnboardingScreen({ user, saveProfile }) {
       <form className="onboarding" onSubmit={submit}>
         <div className="onboarding-head">
           <p className="eyebrow">
-            <Star size={16} /> New user setup
+            <Star size={16} /> {initialProfile ? "Edit setup" : "New user setup"}
           </p>
-          <h1>Tell GateFlow how you study.</h1>
+          <h1>{initialProfile ? "Update your GateFlow plan." : "Tell GateFlow how you study."}</h1>
           <p className="hero-copy">
             Mark covered topics instead of guessing percentages. Coverage is calculated from your
             checklist.
@@ -861,9 +1027,16 @@ function OnboardingScreen({ user, saveProfile }) {
           </div>
         </section>
 
-        <button className="wide-action" type="submit">
-          Generate my planner <ArrowRight size={18} />
-        </button>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+          {cancel && (
+            <button className="ghost-btn" onClick={cancel} type="button" style={{ width: 'auto' }}>
+              Cancel
+            </button>
+          )}
+          <button className="wide-action" type="submit" style={{ flex: 1, margin: 0 }}>
+            {initialProfile ? "Update my planner" : "Generate my planner"} <ArrowRight size={18} />
+          </button>
+        </div>
       </form>
     </main>
   );

@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import mongoose from "mongoose";
+import { MongoMemoryServer } from "mongodb-memory-server";
 import authRoutes from "./routes/authRoutes.js";
 import plannerRoutes from "./routes/plannerRoutes.js";
 
@@ -22,7 +23,12 @@ app.use("/api", plannerRoutes);
 
 const start = async () => {
   try {
-    if (process.env.MONGODB_URI) {
+    if (process.env.USE_LOCAL_DB === 'true') {
+      const mongod = await MongoMemoryServer.create();
+      const uri = mongod.getUri();
+      await mongoose.connect(uri);
+      console.log(`Local In-Memory MongoDB connected at ${uri}`);
+    } else if (process.env.MONGODB_URI) {
       await mongoose.connect(process.env.MONGODB_URI);
       console.log("MongoDB connected");
     } else {

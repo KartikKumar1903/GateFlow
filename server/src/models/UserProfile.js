@@ -33,7 +33,9 @@ const userProfileSchema = new mongoose.Schema(
     dailyStudyTarget: { type: Number, default: 5 },
     subjects: [subjectSchema],
     comfortableSlots: [timeSlotSchema],
-    weakReasonTags: [String]
+    weakReasonTags: [String],
+    backlog: { type: mongoose.Schema.Types.Mixed, default: [] },
+    pyqState: { type: mongoose.Schema.Types.Mixed, default: {} }
   },
   { timestamps: true }
 );

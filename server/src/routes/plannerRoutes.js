@@ -22,6 +22,11 @@ router.get("/profiles/:id", async (req, res) => {
   res.json(profile);
 });
 
+router.put("/profiles/:id", async (req, res) => {
+  const profile = await UserProfile.findByIdAndUpdate(req.params.id, req.body, { new: true });
+  res.json(profile);
+});
+
 router.post("/schedule", async (req, res) => {
   const { profileId, profile: fallbackProfile } = req.body;
   const profile = profileId ? await UserProfile.findById(profileId) : fallbackProfile;
