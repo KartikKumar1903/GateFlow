@@ -20,7 +20,8 @@ const storageKeys = {
   user: "gateflow-v3-user",
   profile: "gateflow-v3-profile",
   backlog: "gateflow-v3-backlog",
-  pyq: "gateflow-v3-pyq"
+  pyq: "gateflow-v3-pyq",
+  taskStatus: "gateflow-v3-task-status"
 };
 
 const accountKey = (base, user) => `${base}-${user?.email || "guest"}`;
@@ -164,7 +165,9 @@ function App() {
   const [pyqState, setPyqState] = useState(() =>
     JSON.parse(localStorage.getItem(accountKey(storageKeys.pyq, savedUser())) || "{}")
   );
-  const [taskStatus, setTaskStatus] = useState({});
+  const [taskStatus, setTaskStatus] = useState(() =>
+    JSON.parse(localStorage.getItem(accountKey(storageKeys.taskStatus, savedUser())) || "{}")
+  );
   const [feedback, setFeedback] = useState("");
   const [coachReply, setCoachReply] = useState("");
   const [editingSlots, setEditingSlots] = useState(false);
@@ -309,10 +312,12 @@ function App() {
 
   const markTask = (taskId) => {
     const isNowCompleted = taskStatus[taskId] !== "completed";
-    setTaskStatus((current) => ({
-      ...current,
+    const nextStatus = {
+      ...taskStatus,
       [taskId]: isNowCompleted ? "completed" : "planned"
-    }));
+    };
+    setTaskStatus(nextStatus);
+    localStorage.setItem(accountKey(storageKeys.taskStatus, user), JSON.stringify(nextStatus));
     
     if (isNowCompleted && user?.profileId) {
       const targetTask = schedule.find(t => t.id === taskId);
@@ -332,11 +337,28 @@ function App() {
 
     let nextBacklog = [...backlog];
 
+    let nextProfile = { ...profile };
+    let profileUpdated = false;
+
     if (completedTasks.length > 0) {
       completedTasks.forEach(task => {
         nextBacklog = nextBacklog.filter(b => !(b.subject === task.subject && b.topic === task.topic));
+        
+        const subjectIndex = nextProfile.subjects.findIndex(s => s.name === task.subject);
+        if (subjectIndex !== -1) {
+          const subject = nextProfile.subjects[subjectIndex];
+          if (!subject.completedTopics.includes(task.topic)) {
+            nextProfile.subjects[subjectIndex] = {
+              ...subject,
+              completedTopics: [...subject.completedTopics, task.topic]
+            };
+            profileUpdated = true;
+          }
+        }
       });
     }
+
+    if (profileUpdated) saveProfile(nextProfile);
 
     if (missed.length > 0) {
       const newBacklogItems = missed.map((item) => ({
@@ -366,7 +388,25 @@ function App() {
 
   const startNextDay = () => {
     setTaskStatus({});
+    localStorage.removeItem(accountKey(storageKeys.taskStatus, user));
     setDayEnded(false);
+
+    if (user?.profileId && profile) {
+      const nextSchedule = buildSchedule(profile, backlog, {});
+      nextSchedule.forEach(task => {
+        fetch('http://localhost:5000/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.profileId,
+            subject: task.subject,
+            topic: task.topic,
+            status: "planned",
+            estimatedMinutes: task.duration
+          })
+        }).catch(e => console.error(e));
+      });
+    }
   };
 
   const removeBacklogItem = (id) => {
@@ -756,21 +796,11 @@ function AuthScreen({
       setProfile(JSON.parse(localStorage.getItem(accountKey(storageKeys.profile, nextUser)) || "null"));
       setBacklog(JSON.parse(localStorage.getItem(accountKey(storageKeys.backlog, nextUser)) || "[]"));
       setPyqState(JSON.parse(localStorage.getItem(accountKey(storageKeys.pyq, nextUser)) || "{}"));
-      setTaskStatus({});
+      setTaskStatus(JSON.parse(localStorage.getItem(accountKey(storageKeys.taskStatus, nextUser)) || "{}"));
       setUser(nextUser);
     } catch (err) {
       console.error(err);
-      const nextUser = {
-        id: Date.now(),
-        name: form.name,
-        email: form.email
-      };
-      localStorage.setItem(storageKeys.user, JSON.stringify(nextUser));
-      setProfile(JSON.parse(localStorage.getItem(accountKey(storageKeys.profile, nextUser)) || "null"));
-      setBacklog(JSON.parse(localStorage.getItem(accountKey(storageKeys.backlog, nextUser)) || "[]"));
-      setPyqState(JSON.parse(localStorage.getItem(accountKey(storageKeys.pyq, nextUser)) || "{}"));
-      setTaskStatus({});
-      setUser(nextUser);
+      alert(err.message || "Authentication failed. Please check your credentials and ensure the server is running.");
     }
   };
 
