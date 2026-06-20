@@ -16,6 +16,8 @@ import {
 import React, { useMemo, useState } from "react";
 import { gateSyllabus } from "./gateSyllabus.js";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 const storageKeys = {
   user: "gateflow-v3-user",
   profile: "gateflow-v3-profile",
@@ -186,9 +188,9 @@ function App() {
     localStorage.setItem(accountKey(storageKeys.profile, user), JSON.stringify(nextProfile));
     try {
       if (user?.profileId) {
-        await fetch(`http://localhost:5000/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nextProfile) });
+        await fetch(`${API_BASE_URL}/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nextProfile) });
       } else if (user?.id && String(user.id).length > 15) { // Ensure it's a mongo ID, not a local timestamp
-        const res = await fetch(`http://localhost:5000/api/profiles`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...nextProfile, userId: user.id }) });
+        const res = await fetch(`${API_BASE_URL}/api/profiles`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...nextProfile, userId: user.id }) });
         const data = await res.json();
         const updatedUser = { ...user, profileId: data._id };
         setUser(updatedUser);
@@ -201,7 +203,7 @@ function App() {
     setBacklog(nextBacklog);
     localStorage.setItem(accountKey(storageKeys.backlog, user), JSON.stringify(nextBacklog));
     if (user?.profileId) {
-      fetch(`http://localhost:5000/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ backlog: nextBacklog }) }).catch(e => console.error(e));
+      fetch(`${API_BASE_URL}/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ backlog: nextBacklog }) }).catch(e => console.error(e));
     }
   };
 
@@ -209,7 +211,7 @@ function App() {
     setPyqState(nextPyq);
     localStorage.setItem(accountKey(storageKeys.pyq, user), JSON.stringify(nextPyq));
     if (user?.profileId) {
-      fetch(`http://localhost:5000/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pyqState: nextPyq }) }).catch(e => console.error(e));
+      fetch(`${API_BASE_URL}/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pyqState: nextPyq }) }).catch(e => console.error(e));
     }
   };
 
@@ -322,7 +324,7 @@ function App() {
     if (isNowCompleted && user?.profileId) {
       const targetTask = schedule.find(t => t.id === taskId);
       if (targetTask) {
-        fetch('http://localhost:5000/api/tasks', {
+        fetch(`${API_BASE_URL}/api/tasks`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: user.profileId, subject: targetTask.subject, topic: targetTask.topic, status: "completed", estimatedMinutes: targetTask.duration })
@@ -373,7 +375,7 @@ function App() {
       
       if (user?.profileId) {
         newBacklogItems.forEach(item => {
-          fetch('http://localhost:5000/api/tasks', {
+          fetch(`${API_BASE_URL}/api/tasks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: user.profileId, subject: item.subject, topic: item.topic, status: "backlog", missedReason: item.reason })
@@ -394,7 +396,7 @@ function App() {
     if (user?.profileId && profile) {
       const nextSchedule = buildSchedule(profile, backlog, {});
       nextSchedule.forEach(task => {
-        fetch('http://localhost:5000/api/tasks', {
+        fetch(`${API_BASE_URL}/api/tasks`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -429,7 +431,7 @@ function App() {
     saveBacklog([newBacklogItem, ...backlog]);
 
     if (user?.profileId) {
-      fetch('http://localhost:5000/api/feedback', {
+      fetch(`${API_BASE_URL}/api/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.profileId, message: feedback, subject: newBacklogItem.subject, topic: newBacklogItem.topic })
@@ -770,7 +772,7 @@ function AuthScreen({
     event.preventDefault();
     try {
       const endpoint = authMode === "signup" ? "/api/auth/signup" : "/api/auth/login";
-      const response = await fetch(`http://localhost:5000${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: form.name, email: form.email, password: form.password })
