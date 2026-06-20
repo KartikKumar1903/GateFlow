@@ -16,7 +16,7 @@ import {
 import React, { useMemo, useState } from "react";
 import { gateSyllabus } from "./gateSyllabus.js";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL = import.meta.env.PROD ? "" : "http://localhost:5000";
 
 const storageKeys = {
   user: "gateflow-v3-user",
