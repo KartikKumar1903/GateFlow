@@ -1,4 +1,9 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import cors from "cors";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import dotenv from "dotenv";
 import express from "express";
 import mongoose from "mongoose";
@@ -24,16 +29,22 @@ app.use("/api", plannerRoutes);
 const start = async () => {
   try {
     if (process.env.USE_LOCAL_DB === 'true') {
-      const mongod = await MongoMemoryServer.create();
-      const uri = mongod.getUri();
-      await mongoose.connect(uri);
-      console.log(`Local In-Memory MongoDB connected at ${uri}`);
+      const mongoServer = await MongoMemoryServer.create();
+      const mongoUri = mongoServer.getUri();
+      await mongoose.connect(mongoUri);
+      console.log(`Local MongoDB Memory Server connected: ${mongoUri}`);
     } else if (process.env.MONGODB_URI) {
       await mongoose.connect(process.env.MONGODB_URI);
       console.log("MongoDB connected");
     } else {
-      console.log("MONGODB_URI missing; API will run without database persistence.");
+      console.warn("No MongoDB configuration provided. Starting API without database connection.");
     }
+
+    // Serve React frontend in production
+    app.use(express.static(path.join(__dirname, "../../client/dist")));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(__dirname, "../../client/dist/index.html"));
+    });
 
     app.listen(port, () => {
       console.log(`API listening on http://localhost:${port}`);
