@@ -771,3 +771,122 @@ input[type="time"] {
     justify-content: start;
   }
 }
+
+/* Fullscreen Quiz Modal */
+.quiz-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(19, 34, 31, 0.7);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.quiz-modal-header {
+  background: #1f5f5b;
+  color: white;
+  padding: 14px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.quiz-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.quiz-modal-header .close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  color: white;
+  padding: 6px 12px;
+  min-height: auto;
+  font-weight: 600;
+  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quiz-modal-header .close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.quiz-modal-iframe {
+  flex: 1;
+  border: none;
+  background: white;
+  width: 100%;
+  height: 100%;
+}
+
+.quiz-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.quiz-filters select,
+.quiz-filters select:focus {
+  background: #fff;
+  border: 1px solid rgba(90, 110, 103, 0.18);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 650;
+  min-height: 38px;
+}
+
+.quiz-paper-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.quiz-paper-card h3 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+}
+
+.quiz-paper-card p {
+  font-size: 0.9rem;
+  margin-bottom: 12px !important;
+}
+
+.quiz-paper-card .quiz-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.quiz-badge {
+  background: #e8f0ec;
+  color: #1f5f5b;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.quiz-badge.full-length {
+  background: rgba(201, 116, 95, 0.12);
+  color: #c46b4f;
+}
+
+.quiz-play-btn {
+  align-self: flex-start;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  min-height: 34px !important;
+  padding: 0 12px !important;
+}
+

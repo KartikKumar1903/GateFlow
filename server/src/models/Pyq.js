@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { getISTTimestamp } from "../utils/dateHelper.js";
 
 const pyqSchema = new mongoose.Schema(
   {
@@ -12,9 +13,16 @@ const pyqSchema = new mongoose.Schema(
       enum: ["not-started", "attempted", "revisit", "solved"],
       default: "not-started"
     },
-    notes: String
+    notes: String,
+    createdTime: { type: String, default: getISTTimestamp },
+    updatedTime: { type: String, default: getISTTimestamp }
   },
   { timestamps: true }
 );
+
+pyqSchema.pre("save", function (next) {
+  this.updatedTime = getISTTimestamp();
+  next();
+});
 
 export default mongoose.model("Pyq", pyqSchema);

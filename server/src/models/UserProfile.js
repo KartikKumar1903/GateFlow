@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { getISTTimestamp } from "../utils/dateHelper.js";
 
 const subjectSchema = new mongoose.Schema(
   {
@@ -35,9 +36,16 @@ const userProfileSchema = new mongoose.Schema(
     comfortableSlots: [timeSlotSchema],
     weakReasonTags: [String],
     backlog: { type: mongoose.Schema.Types.Mixed, default: [] },
-    pyqState: { type: mongoose.Schema.Types.Mixed, default: {} }
+    pyqState: { type: mongoose.Schema.Types.Mixed, default: {} },
+    createdTime: { type: String, default: getISTTimestamp },
+    updatedTime: { type: String, default: getISTTimestamp }
   },
   { timestamps: true }
 );
+
+userProfileSchema.pre("save", function (next) {
+  this.updatedTime = getISTTimestamp();
+  next();
+});
 
 export default mongoose.model("UserProfile", userProfileSchema);

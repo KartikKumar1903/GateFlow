@@ -20,64 +20,93 @@ const topicStatusOf = (subject, topic) => {
   return subject.topicProgress?.[topic] || "Not started";
 };
 
-const subjectScore = (subject, backlogWeight = 0) => {
-  const remaining = 1 - coverageOf(subject) / 100;
-  const difficulty = subject.difficulty / 5;
-  const favoriteRelief = (6 - subject.favorite) / 5;
-  const chosenBoost = subject.coverFirst ? 2.2 : 0;
-  return remaining * 3 + difficulty * 2 + favoriteRelief + chosenBoost + backlogWeight * 1.4;
-};
-
 export const buildAdaptiveSchedule = ({ profile, tasks = [] }) => {
   const slots = [...(profile.comfortableSlots || [])].sort((a, b) => b.energy - a.energy);
   const subjects = (profile.subjects || []).filter((subject) => subject.selected !== false);
-  const backlogBySubject = tasks.reduce((acc, task) => {
-    if (task.status === "backlog" || task.status === "missed") {
-      acc[task.subject] = (acc[task.subject] || 0) + 1 + (task.backlogWeight || 0);
-    }
-    return acc;
-  }, {});
+
+  let backlogWeights = {};
+  if (profile.backlog && Array.isArray(profile.backlog) && profile.backlog.length > 0) {
+    backlogWeights = profile.backlog.reduce((acc, item) => {
+      acc[item.subject] = (acc[item.subject] || 0) + (item.weight || 0);
+      return acc;
+    }, {});
+  } else if (tasks && Array.isArray(tasks) && tasks.length > 0) {
+    backlogWeights = tasks.reduce((acc, task) => {
+      if (task.status === "backlog" || task.status === "missed") {
+        acc[task.subject] = (acc[task.subject] || 0) + 1 + (task.backlogWeight || 0);
+      }
+      return acc;
+    }, {});
+  }
 
   const pool = subjects
-    .map((subject) => ({
-      ...subject,
-      priority: subjectScore(subject, backlogBySubject[subject.name] || 0)
-    }))
+    .map((subject) => {
+      const subjectObj = subject.toObject ? subject.toObject() : subject;
+      const coverage = coverageOf(subjectObj);
+      const remaining = 1 - coverage / 100;
+      const chosenBoost = subjectObj.coverFirst ? 2.2 : 0;
+      const priority =
+        remaining * 3 +
+        (subjectObj.difficulty / 5) * 2 +
+        ((6 - subjectObj.favorite) / 5) +
+        chosenBoost +
+        (backlogWeights[subjectObj.name] || 0) * 1.4;
+      return { ...subjectObj, coverage, priority };
+    })
     .sort((a, b) => b.priority - a.priority);
 
   if (!slots.length || !pool.length) {
     return [];
   }
 
-  return slots.map((slot, index) => {
+  const schedule = slots.map((slot, index) => {
     const subject = pool[index % pool.length];
     const available = minutesBetween(slot.start, slot.end);
     const difficultyBoost = subject.difficulty * 8;
     const favoriteDrag = (6 - subject.favorite) * 5;
-    const backlogBoost = (backlogBySubject[subject.name] || 0) * 12;
+    const backlogBoost = (backlogWeights[subject.name] || 0) * 10;
     const duration = clamp(roundBlock(40 + difficultyBoost + favoriteDrag + backlogBoost), 30, available);
-    const taskType = backlogBySubject[subject.name] ? "Backlog repair" : "Core study";
+    const mode = backlogWeights[subject.name] ? "Backlog repair" : "Core study";
+    const id = `${slot.label}-${subject.name}-${index}`;
 
     return {
-      slot: slot.label,
+      id,
+      label: slot.label,
       start: slot.start,
       end: slot.end,
       energy: slot.energy,
       subject: subject.name,
       topic: pickTopic(subject),
       duration: Math.round(duration),
-      taskType,
-      priority: Number(subject.priority.toFixed(2)),
-      reason: `${subject.name} gets ${Math.round(duration)} minutes because coverage is ${coverageOf(subject)}%, difficulty is ${subject.difficulty}/5, favorite score is ${subject.favorite}/5, and backlog weight is ${backlogBySubject[subject.name] || 0}.`
+      score: subject.priority.toFixed(1),
+      mode,
+      reason: `${subject.name} gets ${Math.round(duration)} minutes because coverage is ${coverageOf(subject)}%, difficulty is ${subject.difficulty}/5, favorite score is ${subject.favorite}/5, and backlog weight is ${backlogWeights[subject.name] || 0}.`
     };
   });
+
+  const isWeekend = [0, 6].includes(new Date().getDay());
+  if (isWeekend) {
+    const coveredSubject = pool.find((subject) => subject.completedTopics?.length);
+    if (coveredSubject) {
+      schedule.push({
+        id: `weekend-${coveredSubject.name}`,
+        label: "Weekend revision",
+        start: "Flexible",
+        end: "30 min",
+        subject: coveredSubject.name,
+        topic: coveredSubject.completedTopics[0],
+        duration: 30,
+        score: "Revision",
+        mode: "Covered-topic revision",
+        reason: `Flexible weekend revision block for ${coveredSubject.name} since it has covered topics.`
+      });
+    }
+  }
+
+  return schedule;
 };
 
 const pickTopic = (subject) => {
   const nextTopic = subject.topics?.find((topic) => topicStatusOf(subject, topic) !== "Covered");
-  if (nextTopic) return nextTopic;
-  const coverage = coverageOf(subject);
-  if (coverage < 35) return "Build fundamentals";
-  if (coverage < 70) return "Mixed practice + weak areas";
-  return "Revision and PYQs";
+  return nextTopic || "Revision + PYQs";
 };

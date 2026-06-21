@@ -15,8 +15,17 @@ import {
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { gateSyllabus } from "./gateSyllabus.js";
+import { createSchedule } from "./api.js";
 
 const API_BASE_URL = import.meta.env.PROD ? "" : "http://localhost:5000";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("gateflow-v3-token");
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { "Authorization": `Bearer ${token}` } : {})
+  };
+};
 
 const storageKeys = {
   user: "gateflow-v3-user",
@@ -177,20 +186,112 @@ function App() {
   const [dayEnded, setDayEnded] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  const schedule = useMemo(
-    () => (profile ? buildSchedule(profile, backlog, taskStatus) : []),
-    [profile, backlog, taskStatus]
-  );
+  const [rawSchedule, setRawSchedule] = useState([]);
+
+  const schedule = useMemo(() => {
+    return rawSchedule.map(item => ({
+      ...item,
+      completed: taskStatus[item.id] === "completed"
+    }));
+  }, [rawSchedule, taskStatus]);
+
+  const fetchSchedule = async (currentProfile = profile, currentBacklog = backlog) => {
+    if (!currentProfile) {
+      setRawSchedule([]);
+      return;
+    }
+    try {
+      if (user?.profileId) {
+        const data = await createSchedule({ profileId: user.profileId });
+        if (data && data.schedule) {
+          setRawSchedule(data.schedule);
+          return;
+        }
+      }
+      // Fallback to local scheduler
+      const local = buildSchedule(currentProfile, currentBacklog, taskStatus);
+      setRawSchedule(local);
+    } catch (e) {
+      console.error("Failed to fetch schedule from backend, falling back to local generation", e);
+      const local = buildSchedule(currentProfile, currentBacklog, taskStatus);
+      setRawSchedule(local);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchSchedule(profile, backlog);
+  }, [profile, backlog]);
+
+  React.useEffect(() => {
+    const fetchLatestProfile = async () => {
+      if (user?.profileId) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/profiles/${user.profileId}`, {
+            headers: getAuthHeaders()
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setProfile(data);
+            if (data.backlog) setBacklog(data.backlog);
+            if (data.pyqState) setPyqState(data.pyqState);
+            
+            // Sync to localStorage
+            localStorage.setItem(accountKey(storageKeys.profile, user), JSON.stringify(data));
+            if (data.backlog) localStorage.setItem(accountKey(storageKeys.backlog, user), JSON.stringify(data.backlog));
+            if (data.pyqState) localStorage.setItem(accountKey(storageKeys.pyq, user), JSON.stringify(data.pyqState));
+          }
+        } catch (e) {
+          console.error("Failed to fetch latest profile from server", e);
+        }
+      }
+    };
+    fetchLatestProfile();
+  }, [user?.profileId]);
   const pyqQueue = useMemo(() => (profile ? makePyqQueue(profile, pyqState) : []), [profile, pyqState]);
+
+  const [quizzes, setQuizzes] = useState([]);
+  const [selectedQuizSubject, setSelectedQuizSubject] = useState("All");
+  const [selectedQuizType, setSelectedQuizType] = useState("All");
+  const [activeQuiz, setActiveQuiz] = useState(null);
+
+  React.useEffect(() => {
+    fetch("/pyqs/pyqRegistry.json")
+      .then((res) => {
+        if (res.ok) return res.json();
+        return [];
+      })
+      .then((data) => setQuizzes(data))
+      .catch((err) => console.error("Failed to load pyqRegistry.json", err));
+  }, []);
+
+  React.useEffect(() => {
+    const handleQuizMessage = (event) => {
+      if (event.data?.type === "QUIZ_COMPLETED") {
+        const { quizId, score } = event.data;
+        savePyq({ ...pyqState, [quizId]: "Solved" });
+        alert(`Congratulations! You completed the quiz with a score of ${score}%. Your progress has been updated.`);
+      }
+    };
+    window.addEventListener("message", handleQuizMessage);
+    return () => window.removeEventListener("message", handleQuizMessage);
+  }, [pyqState]);
+
+  const filteredQuizzes = useMemo(() => {
+    return quizzes.filter(quiz => {
+      const subjectMatch = selectedQuizSubject === "All" || quiz.subject === selectedQuizSubject;
+      const typeMatch = selectedQuizType === "All" || quiz.type === selectedQuizType;
+      return subjectMatch && typeMatch;
+    });
+  }, [quizzes, selectedQuizSubject, selectedQuizType]);
 
   const saveProfile = async (nextProfile) => {
     setProfile(nextProfile);
     localStorage.setItem(accountKey(storageKeys.profile, user), JSON.stringify(nextProfile));
     try {
       if (user?.profileId) {
-        await fetch(`${API_BASE_URL}/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nextProfile) });
+        await fetch(`${API_BASE_URL}/api/profiles/${user.profileId}`, { method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(nextProfile) });
       } else if (user?.id && String(user.id).length > 15) { // Ensure it's a mongo ID, not a local timestamp
-        const res = await fetch(`${API_BASE_URL}/api/profiles`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...nextProfile, userId: user.id }) });
+        const res = await fetch(`${API_BASE_URL}/api/profiles`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ ...nextProfile, userId: user.id }) });
         const data = await res.json();
         const updatedUser = { ...user, profileId: data._id };
         setUser(updatedUser);
@@ -203,7 +304,7 @@ function App() {
     setBacklog(nextBacklog);
     localStorage.setItem(accountKey(storageKeys.backlog, user), JSON.stringify(nextBacklog));
     if (user?.profileId) {
-      fetch(`${API_BASE_URL}/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ backlog: nextBacklog }) }).catch(e => console.error(e));
+      fetch(`${API_BASE_URL}/api/profiles/${user.profileId}`, { method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify({ backlog: nextBacklog }) }).catch(e => console.error(e));
     }
   };
 
@@ -211,7 +312,7 @@ function App() {
     setPyqState(nextPyq);
     localStorage.setItem(accountKey(storageKeys.pyq, user), JSON.stringify(nextPyq));
     if (user?.profileId) {
-      fetch(`${API_BASE_URL}/api/profiles/${user.profileId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pyqState: nextPyq }) }).catch(e => console.error(e));
+      fetch(`${API_BASE_URL}/api/profiles/${user.profileId}`, { method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify({ pyqState: nextPyq }) }).catch(e => console.error(e));
     }
   };
 
@@ -326,7 +427,7 @@ function App() {
       if (targetTask) {
         fetch(`${API_BASE_URL}/api/tasks`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ userId: user.profileId, subject: targetTask.subject, topic: targetTask.topic, status: "completed", estimatedMinutes: targetTask.duration })
         }).catch(e => console.error(e));
       }
@@ -377,7 +478,7 @@ function App() {
         newBacklogItems.forEach(item => {
           fetch(`${API_BASE_URL}/api/tasks`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ userId: user.profileId, subject: item.subject, topic: item.topic, status: "backlog", missedReason: item.reason })
           }).catch(e => console.error(e));
         });
@@ -398,7 +499,7 @@ function App() {
       nextSchedule.forEach(task => {
         fetch(`${API_BASE_URL}/api/tasks`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             userId: user.profileId,
             subject: task.subject,
@@ -433,7 +534,7 @@ function App() {
     if (user?.profileId) {
       fetch(`${API_BASE_URL}/api/feedback`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ userId: user.profileId, message: feedback, subject: newBacklogItem.subject, topic: newBacklogItem.topic })
       }).catch(e => console.error(e));
     }
@@ -441,6 +542,7 @@ function App() {
 
   const logout = () => {
     localStorage.removeItem(storageKeys.user);
+    localStorage.removeItem("gateflow-v3-token");
     setUser(null);
     setProfile(null);
     setBacklog([]);
@@ -752,7 +854,81 @@ function App() {
             </article>
           ))}
         </div>
+
+        <div style={{ marginTop: "32px", borderTop: "1px solid rgba(90, 110, 103, 0.15)", paddingTop: "24px" }}>
+          <div className="section-title">
+            <div>
+              <p className="eyebrow">Interactive Test Center</p>
+              <h2>All PYQ Papers ({quizzes.length})</h2>
+            </div>
+            <div className="quiz-filters">
+              <select value={selectedQuizSubject} onChange={(e) => setSelectedQuizSubject(e.target.value)}>
+                <option value="All">All Subjects</option>
+                {Array.from(new Set(quizzes.map((q) => q.subject))).map((sub) => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
+              <select value={selectedQuizType} onChange={(e) => setSelectedQuizType(e.target.value)}>
+                <option value="All">All Test Types</option>
+                <option value="Full Length">Full Length</option>
+                <option value="Topic-wise">Topic-wise</option>
+              </select>
+            </div>
+          </div>
+
+          {filteredQuizzes.length === 0 ? (
+            <p className="empty-state">No papers registered in pyqRegistry.json yet. Please check your config.</p>
+          ) : (
+            <div className="pyq-grid">
+              {filteredQuizzes.map((quiz) => {
+                const status = pyqState[quiz.id] || "Not started";
+                return (
+                  <article key={quiz.id}>
+                    <div className="quiz-paper-card">
+                      <div>
+                        <strong>{quiz.year}</strong>
+                        <h3>{quiz.subject}</h3>
+                        <p>{quiz.topic}</p>
+                      </div>
+                      <div className="quiz-card-meta">
+                        <span className={`quiz-badge ${quiz.type === "Full Length" ? "full-length" : ""}`}>
+                          {quiz.type}
+                        </span>
+                        <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: status === "Solved" ? "#1f5f5b" : "#6d7c76" }}>
+                          {status}
+                        </span>
+                      </div>
+                      <button
+                        className="quiz-play-btn"
+                        onClick={() => setActiveQuiz(quiz)}
+                        type="button"
+                      >
+                        <Sparkles size={14} /> Attempt Quiz
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </section>
+
+      {activeQuiz && (
+        <div className="quiz-modal-backdrop">
+          <div className="quiz-modal-header">
+            <h3>{activeQuiz.year} - {activeQuiz.subject} ({activeQuiz.topic})</h3>
+            <button className="close-btn" onClick={() => setActiveQuiz(null)} type="button">
+              <X size={16} /> Close Test
+            </button>
+          </div>
+          <iframe
+            src={`/pyqs/${activeQuiz.filename}`}
+            title={activeQuiz.topic}
+            className="quiz-modal-iframe"
+          />
+        </div>
+      )}
     </main>
   );
 }
@@ -780,6 +956,8 @@ function AuthScreen({
       if (!response.ok) throw new Error("Auth failed");
       const data = await response.json();
       
+      localStorage.setItem("gateflow-v3-token", data.token);
+
       const nextUser = {
         id: data.user.id,
         name: data.user.name,

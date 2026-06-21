@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { getISTTimestamp } from "../utils/dateHelper.js";
 
 const taskSchema = new mongoose.Schema(
   {
@@ -23,9 +24,16 @@ const taskSchema = new mongoose.Schema(
     },
     backlogWeight: { type: Number, default: 0 },
     dueDate: String,
-    missedReason: String
+    missedReason: String,
+    createdTime: { type: String, default: getISTTimestamp },
+    updatedTime: { type: String, default: getISTTimestamp }
   },
   { timestamps: true }
 );
+
+taskSchema.pre("save", function (next) {
+  this.updatedTime = getISTTimestamp();
+  next();
+});
 
 export default mongoose.model("Task", taskSchema);
