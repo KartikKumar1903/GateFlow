@@ -369,7 +369,8 @@ function App() {
       status === "Covered"
         ? Array.from(new Set([...subject.completedTopics, topic]))
         : subject.completedTopics.filter((item) => item !== topic);
-    const coverage = Math.round((completedTopics.length / Math.max(subject.topics.length, 1)) * 100);
+    // Clamp coverage to a maximum of 100
+    const coverage = Math.min(100, Math.round((completedTopics.length / Math.max(subject.topics.length, 1)) * 100));
 
     updateSubject(subjectName, {
       topicProgress: { ...(subject.topicProgress || {}), [topic]: status },
@@ -454,9 +455,10 @@ function App() {
         const subjectIndex = updatedSubjects.findIndex(s => s.name === task.subject);
         if (subjectIndex !== -1) {
           const subject = updatedSubjects[subjectIndex];
-          if (!subject.completedTopics.includes(task.topic)) {
+          // Only add the topic if it actually exists in the subject's topics list (e.g. avoid adding "Revision + PYQs")
+          if (subject.topics.includes(task.topic) && !subject.completedTopics.includes(task.topic)) {
             const newCompletedTopics = [...subject.completedTopics, task.topic];
-            const newCoverage = Math.round((newCompletedTopics.length / Math.max(subject.topics.length, 1)) * 100);
+            const newCoverage = Math.min(100, Math.round((newCompletedTopics.length / Math.max(subject.topics.length, 1)) * 100));
             updatedSubjects[subjectIndex] = {
               ...subject,
               completedTopics: newCompletedTopics,
@@ -1080,7 +1082,8 @@ function OnboardingScreen({ user, saveProfile, initialProfile, cancel }) {
       status === "Covered"
         ? Array.from(new Set([...subject.completedTopics, topic]))
         : subject.completedTopics.filter((item) => item !== topic);
-    const coverage = Math.round((completedTopics.length / Math.max(subject.topics.length, 1)) * 100);
+    // Clamp coverage to a maximum of 100
+    const coverage = Math.min(100, Math.round((completedTopics.length / Math.max(subject.topics.length, 1)) * 100));
 
     updateSubject(subjectName, {
       topicProgress: { ...(subject.topicProgress || {}), [topic]: status },

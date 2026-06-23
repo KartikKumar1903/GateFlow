@@ -47,9 +47,15 @@ userProfileSchema.pre("save", function (next) {
   this.updatedTime = getISTTimestamp();
   if (this.subjects && Array.isArray(this.subjects)) {
     this.subjects.forEach((subject) => {
+      // Filter out completedTopics that are not in the topics list
+      if (subject.completedTopics && subject.topics) {
+        subject.completedTopics = subject.completedTopics.filter((t) =>
+          subject.topics.includes(t)
+        );
+      }
       const totalTopics = subject.topics ? subject.topics.length : 0;
       const completedCount = subject.completedTopics ? subject.completedTopics.length : 0;
-      subject.coverage = totalTopics > 0 ? Math.round((completedCount / totalTopics) * 100) : 0;
+      subject.coverage = totalTopics > 0 ? Math.min(100, Math.round((completedCount / totalTopics) * 100)) : 0;
     });
   }
   next();
