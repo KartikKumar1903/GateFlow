@@ -952,3 +952,85 @@ input[type="time"] {
   padding: 4px 8px;
 }
 
+/* Category Modal overlay */
+.category-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(19, 34, 31, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.category-modal-card {
+  background: #fffaf3;
+  border: 1px solid rgba(90, 110, 103, 0.2);
+  border-radius: 12px;
+  width: min(100%, 960px);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(19, 34, 31, 0.3);
+  animation: modalFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.category-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(90, 110, 103, 0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+}
+
+.category-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #13221f;
+  font-weight: 750;
+}
+
+.category-modal-header .close-btn {
+  background: rgba(90, 110, 103, 0.1);
+  border: 1px solid rgba(90, 110, 103, 0.15);
+  border-radius: 6px;
+  color: #40524d;
+  padding: 6px 12px;
+  min-height: auto;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.category-modal-header .close-btn:hover {
+  background: rgba(90, 110, 103, 0.2);
+}
+
+.category-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+

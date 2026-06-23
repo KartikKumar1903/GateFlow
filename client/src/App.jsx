@@ -235,6 +235,7 @@ function App() {
 
   const [quizzes, setQuizzes] = useState([]);
   const [activeCategory, setActiveCategory] = useState("Full Length");
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [activeQuiz, setActiveQuiz] = useState(null);
 
   const categories = useMemo(() => {
@@ -828,7 +829,10 @@ function App() {
             <article 
               key={cat.name} 
               className={`subject-box ${activeCategory === cat.name ? "active" : ""}`}
-              onClick={() => setActiveCategory(cat.name)}
+              onClick={() => {
+                setActiveCategory(cat.name);
+                setShowCategoryModal(true);
+              }}
             >
               <div className="subject-box-info">
                 <h3>{cat.name === "Full Length" ? "Full Length Tests" : cat.name}</h3>
@@ -840,48 +844,59 @@ function App() {
             </article>
           ))}
         </div>
-
-        <div style={{ marginTop: "32px", borderTop: "1px solid rgba(90, 110, 103, 0.15)", paddingTop: "24px" }}>
-          <div className="section-title">
-            <h2>Papers in {activeCategory === "Full Length" ? "Full Length Tests" : activeCategory}</h2>
-          </div>
-          {filteredQuizzes.length === 0 ? (
-            <p className="empty-state">No papers registered in pyqRegistry.json yet. Please check your config.</p>
-          ) : (
-            <div className="pyq-grid">
-            {filteredQuizzes.map((quiz) => {
-              const status = pyqState[quiz.id] || "Not started";
-              return (
-                <article key={quiz.id}>
-                  <div className="quiz-paper-card">
-                    <div>
-                      <strong>{quiz.year}</strong>
-                      <h3>{quiz.subject}</h3>
-                      <p>{quiz.topic}</p>
-                    </div>
-                    <div className="quiz-card-meta">
-                      <span className={`quiz-badge ${quiz.type === "Full Length" ? "full-length" : ""}`}>
-                        {quiz.type}
-                      </span>
-                      <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: status === "Solved" ? "#1f5f5b" : "#6d7c76" }}>
-                        {status}
-                      </span>
-                    </div>
-                    <button
-                      className="quiz-play-btn"
-                      onClick={() => setActiveQuiz(quiz)}
-                      type="button"
-                    >
-                      <Sparkles size={14} /> Attempt Quiz
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-        </div>
       </section>
+
+      {showCategoryModal && (
+        <div className="category-modal-backdrop" onClick={() => setShowCategoryModal(false)}>
+          <div className="category-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="category-modal-header">
+              <h3>Papers in {activeCategory === "Full Length" ? "Full Length Tests" : activeCategory}</h3>
+              <button className="close-btn" onClick={() => setShowCategoryModal(false)} type="button">
+                <X size={16} /> Close
+              </button>
+            </div>
+            <div className="category-modal-body">
+              {filteredQuizzes.length === 0 ? (
+                <p className="empty-state">No papers registered in pyqRegistry.json yet. Please check your config.</p>
+              ) : (
+                <div className="pyq-grid">
+                  {filteredQuizzes.map((quiz) => {
+                    const status = pyqState[quiz.id] || "Not started";
+                    return (
+                      <article key={quiz.id}>
+                        <div className="quiz-paper-card">
+                          <div>
+                            <strong>{quiz.year}</strong>
+                            <h3>{quiz.subject}</h3>
+                            <p>{quiz.topic}</p>
+                          </div>
+                          <div className="quiz-card-meta">
+                            <span className={`quiz-badge ${quiz.type === "Full Length" ? "full-length" : ""}`}>
+                              {quiz.type}
+                            </span>
+                            <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: status === "Solved" ? "#1f5f5b" : "#6d7c76" }}>
+                              {status}
+                            </span>
+                          </div>
+                          <button
+                            className="quiz-play-btn"
+                            onClick={() => {
+                              setActiveQuiz(quiz);
+                            }}
+                            type="button"
+                          >
+                            <Sparkles size={14} /> Attempt Quiz
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeQuiz && (
         <div className="quiz-modal-backdrop">
