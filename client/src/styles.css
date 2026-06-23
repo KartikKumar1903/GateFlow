@@ -513,21 +513,35 @@ input[type="time"] {
 }
 
 .pyq-grid {
-  grid-template-columns: repeat(4, 1fr);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
-.pyq article {
+.pyq article,
+.pyq-grid article {
   background: #fffaf3;
   border: 1px solid rgba(90, 110, 103, 0.1);
   border-radius: 8px;
   padding: 16px;
+  transition: all 0.22s ease-in-out;
 }
 
-.pyq strong {
+.pyq article:hover,
+.pyq-grid article:hover {
+  background: #ffffff;
+  border-color: rgba(31, 95, 91, 0.35);
+  box-shadow: 0 8px 24px rgba(45, 57, 53, 0.06);
+  transform: translateY(-2px);
+}
+
+.pyq strong,
+.pyq-grid strong {
   color: #c46b4f;
 }
 
-.pyq span {
+.pyq span,
+.pyq-grid span {
   display: inline-flex;
   margin-top: 14px;
 }
@@ -1020,6 +1034,25 @@ input[type="time"] {
   padding: 24px;
   overflow-y: auto;
   flex: 1;
+}
+
+/* Custom scrollbar styling for category modal */
+.category-modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.category-modal-body::-webkit-scrollbar-track {
+  background: rgba(90, 110, 103, 0.05);
+  border-radius: 4px;
+}
+
+.category-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(31, 95, 91, 0.25);
+  border-radius: 4px;
+}
+
+.category-modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(31, 95, 91, 0.45);
 }
 
 @keyframes modalFadeIn {
