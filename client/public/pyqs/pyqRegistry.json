@@ -46,5 +46,133 @@
     "topic": "Computer Networks (Test-2)",
     "type": "Syllabus Test",
     "filename": "CN 2.html"
+  },
+  {
+    "id": "001-apti-test-1-2026",
+    "year": 2026,
+    "subject": "Aptitude",
+    "topic": "Aptitude (Test-1)",
+    "type": "Syllabus Test",
+    "filename": "Apti 1.html"
+  },
+  {
+    "id": "002-apti-test-2-2026",
+    "year": 2026,
+    "subject": "Aptitude",
+    "topic": "Aptitude (Test-2)",
+    "type": "Syllabus Test",
+    "filename": "Apti 2.html"
+  },
+  {
+    "id": "001-coa-test-1-2026",
+    "year": 2026,
+    "subject": "Computer Organization & Architecture",
+    "topic": "Computer Organization & Architecture (Test-1)",
+    "type": "Syllabus Test",
+    "filename": "COA 1.html"
+  },
+  {
+    "id": "002-coa-test-2-2026",
+    "year": 2026,
+    "subject": "Computer Organization & Architecture",
+    "topic": "Computer Organization & Architecture (Test-2)",
+    "type": "Syllabus Test",
+    "filename": "COA 2.html"
+  },
+  {
+    "id": "001-dbms-test-1-2026",
+    "year": 2026,
+    "subject": "Database Management System",
+    "topic": "Database Management System (Test-1)",
+    "type": "Syllabus Test",
+    "filename": "DBMS 1.html"
+  },
+  {
+    "id": "002-dbms-test-2-2026",
+    "year": 2026,
+    "subject": "Database Management System",
+    "topic": "Database Management System (Test-2)",
+    "type": "Syllabus Test",
+    "filename": "DBMS 2.html"
+  },
+  {
+    "id": "001-digi-test-1-2026",
+    "year": 2026,
+    "subject": "Digital Logic",
+    "topic": "Digital Logic (Test-1)",
+    "type": "Syllabus Test",
+    "filename": "Digital Logic 1.html"
+  },
+  {
+    "id": "002-digi-test-2-2026",
+    "year": 2026,
+    "subject": "Digital Logic",
+    "topic": "Digital Logic (Test-2)",
+    "type": "Syllabus Test",
+    "filename": "Digital Logic 2.html"
+  },
+  {
+    "id": "001-engg-maths-test-1-2026",
+    "year": 2026,
+    "subject": "Engineering Mathematics",
+    "topic": "Engineering Mathematics (Test-1)",
+    "type": "Syllabus Test",
+    "filename": "Engineering Mathematics 1.html"
+  },
+  {
+    "id": "002-engg-maths-test-2-2026",
+    "year": 2026,
+    "subject": "Engineering Mathematics",
+    "topic": "Engineering Mathematics (Test-2)",
+    "type": "Syllabus Test",
+    "filename": "Engineering Mathematics 2.html"
+  },
+  {
+    "id": "001-os-test-1-2026",
+    "year": 2026,
+    "subject": "Operating System",
+    "topic": "Operating System (Test-1)",
+    "type": "Syllabus Test",
+    "filename": "OS 1.html"
+  },
+  {
+    "id": "002-os-test-2-2026",
+    "year": 2026,
+    "subject": "Operating System",
+    "topic": "Operating System (Test-2)",
+    "type": "Syllabus Test",
+    "filename": "OS 2.html"
+  },
+  {
+    "id": "001-plt-test-1-2026",
+    "year": 2026,
+    "subject": "Programming & Data Structures",
+    "topic": "Programming & Data Structures (Test-1)",
+    "type": "Syllabus Test",
+    "filename": "PLT 1.html"
+  },
+  {
+    "id": "002-plt-test-2-2026",
+    "year": 2026,
+    "subject": "Programming & Data Structures",
+    "topic": "Programming & Data Structures (Test-2)",
+    "type": "Syllabus Test",
+    "filename": "PLT 2.html"
+  },
+  {
+    "id": "001-theory-test-1-2026",
+    "year": 2026,
+    "subject": "Theory of Computation",
+    "topic": "Theory of Computation (Test-1)",
+    "type": "Syllabus Test",
+    "filename": "Theory of Computation 1.html"
+  },
+  {
+    "id": "002-theory-test-2-2026",
+    "year": 2026,
+    "subject": "Theory of Computation",
+    "topic": "Theory of Computation (Test-2)",
+    "type": "Syllabus Test",
+    "filename": "Theory of Computation 2.html"
   }
 ]

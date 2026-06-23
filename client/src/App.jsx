@@ -810,6 +810,8 @@ function App() {
             <p className="eyebrow">Interactive Test Center</p>
             <h2>All PYQ Papers ({quizzes.length})</h2>
           </div>
+        </div>
+        <div className="test-tabs-container">
           <div className="test-tabs">
             {categories.map((cat) => (
               <button

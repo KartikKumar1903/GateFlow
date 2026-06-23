@@ -890,18 +890,46 @@ input[type="time"] {
   padding: 0 12px !important;
 }
 
+.test-tabs-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.test-tabs-container::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.95));
+  pointer-events: none;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
 .test-tabs {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 4px 4px 8px 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+.test-tabs::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
 }
 
 .tab-btn {
+  flex: 0 0 auto; /* Prevent button shrinking */
   background: transparent;
   color: #1f5f5b;
   border: 1px solid rgba(31, 95, 91, 0.22);
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 750;
   min-height: 38px;
   padding: 0 16px;
