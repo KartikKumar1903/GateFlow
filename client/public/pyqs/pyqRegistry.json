@@ -30,5 +30,21 @@
     "topic": "Algorithm (Test-2)",
     "type": "Syllabus Test",
     "filename": "Algo 2.html"
+  },
+  {
+    "id": "001-cn-test-1-2026",
+    "year": 2026,
+    "subject": "Computer Networks",
+    "topic": "Computer Networks (Test-1)",
+    "type": "Syllabus Test",
+    "filename": "CN 1.html"
+  },
+  {
+    "id": "002-cn-test-2-2026",
+    "year": 2026,
+    "subject": "Computer Networks",
+    "topic": "Computer Networks (Test-2)",
+    "type": "Syllabus Test",
+    "filename": "CN 2.html"
   }
 ]

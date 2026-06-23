@@ -890,3 +890,33 @@ input[type="time"] {
   padding: 0 12px !important;
 }
 
+.test-tabs {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background: transparent;
+  color: #1f5f5b;
+  border: 1px solid rgba(31, 95, 91, 0.22);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 750;
+  min-height: 38px;
+  padding: 0 16px;
+  transition: all 0.25s ease;
+}
+
+.tab-btn:hover {
+  background: rgba(31, 95, 91, 0.06);
+  border-color: rgba(31, 95, 91, 0.4);
+}
+
+.tab-btn.active {
+  background: #1f5f5b;
+  color: #fff;
+  border-color: #1f5f5b;
+  box-shadow: 0 4px 12px rgba(31, 95, 91, 0.15);
+}
+

@@ -234,9 +234,19 @@ function App() {
 
 
   const [quizzes, setQuizzes] = useState([]);
-  const [selectedQuizSubject, setSelectedQuizSubject] = useState("All");
-  const [selectedQuizType, setSelectedQuizType] = useState("All");
+  const [activeCategory, setActiveCategory] = useState("Full Length");
   const [activeQuiz, setActiveQuiz] = useState(null);
+
+  const categories = useMemo(() => {
+    const subjectsSet = new Set();
+    quizzes.forEach((q) => {
+      if (q.subject && q.subject !== "Full Length") {
+        subjectsSet.add(q.subject);
+      }
+    });
+    const subjectsArray = Array.from(subjectsSet).sort();
+    return ["Full Length", ...subjectsArray];
+  }, [quizzes]);
 
   React.useEffect(() => {
     fetch("/pyqs/pyqRegistry.json")
@@ -261,12 +271,8 @@ function App() {
   }, [pyqState]);
 
   const filteredQuizzes = useMemo(() => {
-    return quizzes.filter(quiz => {
-      const subjectMatch = selectedQuizSubject === "All" || quiz.subject === selectedQuizSubject;
-      const typeMatch = selectedQuizType === "All" || quiz.type === selectedQuizType;
-      return subjectMatch && typeMatch;
-    });
-  }, [quizzes, selectedQuizSubject, selectedQuizType]);
+    return quizzes.filter((quiz) => quiz.subject === activeCategory);
+  }, [quizzes, activeCategory]);
 
   const saveProfile = async (nextProfile) => {
     setProfile(nextProfile);
@@ -804,18 +810,17 @@ function App() {
             <p className="eyebrow">Interactive Test Center</p>
             <h2>All PYQ Papers ({quizzes.length})</h2>
           </div>
-          <div className="quiz-filters">
-            <select value={selectedQuizSubject} onChange={(e) => setSelectedQuizSubject(e.target.value)}>
-              <option value="All">All Subjects</option>
-              {Array.from(new Set(quizzes.map((q) => q.subject))).map((sub) => (
-                <option key={sub} value={sub}>{sub}</option>
-              ))}
-            </select>
-            <select value={selectedQuizType} onChange={(e) => setSelectedQuizType(e.target.value)}>
-              <option value="All">All Test Types</option>
-              <option value="Full Length">Full Length</option>
-              <option value="Topic-wise">Topic-wise</option>
-            </select>
+          <div className="test-tabs">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                className={activeCategory === cat ? "tab-btn active" : "tab-btn"}
+                onClick={() => setActiveCategory(cat)}
+                type="button"
+              >
+                {cat === "Full Length" ? "Full Length Tests" : cat}
+              </button>
+            ))}
           </div>
         </div>
 
