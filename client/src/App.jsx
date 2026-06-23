@@ -248,6 +248,18 @@ function App() {
     return ["Full Length", ...subjectsArray];
   }, [quizzes]);
 
+  const categoriesWithMeta = useMemo(() => {
+    return categories.map((cat) => {
+      const categoryQuizzes = quizzes.filter((q) => q.subject === cat);
+      const solvedCount = categoryQuizzes.filter((q) => pyqState[q.id] === "Solved").length;
+      return {
+        name: cat,
+        total: categoryQuizzes.length,
+        solved: solvedCount
+      };
+    });
+  }, [categories, quizzes, pyqState]);
+
   React.useEffect(() => {
     fetch("/pyqs/pyqRegistry.json")
       .then((res) => {
@@ -811,25 +823,32 @@ function App() {
             <h2>All PYQ Papers ({quizzes.length})</h2>
           </div>
         </div>
-        <div className="test-tabs-container">
-          <div className="test-tabs">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                className={activeCategory === cat ? "tab-btn active" : "tab-btn"}
-                onClick={() => setActiveCategory(cat)}
-                type="button"
-              >
-                {cat === "Full Length" ? "Full Length Tests" : cat}
-              </button>
-            ))}
-          </div>
+        <div className="subject-box-grid">
+          {categoriesWithMeta.map((cat) => (
+            <article 
+              key={cat.name} 
+              className={`subject-box ${activeCategory === cat.name ? "active" : ""}`}
+              onClick={() => setActiveCategory(cat.name)}
+            >
+              <div className="subject-box-info">
+                <h3>{cat.name === "Full Length" ? "Full Length Tests" : cat.name}</h3>
+                <p>{cat.total} {cat.total === 1 ? "Test" : "Tests"}</p>
+              </div>
+              <div className="subject-box-badge">
+                <span>{cat.solved}/{cat.total} Solved</span>
+              </div>
+            </article>
+          ))}
         </div>
 
-        {filteredQuizzes.length === 0 ? (
-          <p className="empty-state">No papers registered in pyqRegistry.json yet. Please check your config.</p>
-        ) : (
-          <div className="pyq-grid">
+        <div style={{ marginTop: "32px", borderTop: "1px solid rgba(90, 110, 103, 0.15)", paddingTop: "24px" }}>
+          <div className="section-title">
+            <h2>Papers in {activeCategory === "Full Length" ? "Full Length Tests" : activeCategory}</h2>
+          </div>
+          {filteredQuizzes.length === 0 ? (
+            <p className="empty-state">No papers registered in pyqRegistry.json yet. Please check your config.</p>
+          ) : (
+            <div className="pyq-grid">
             {filteredQuizzes.map((quiz) => {
               const status = pyqState[quiz.id] || "Not started";
               return (
@@ -861,6 +880,7 @@ function App() {
             })}
           </div>
         )}
+        </div>
       </section>
 
       {activeQuiz && (
