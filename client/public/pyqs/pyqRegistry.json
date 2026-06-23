@@ -2,7 +2,7 @@
   {
     "id": "001-adv-test-1-2025",
     "year": 2025,
-    "subject": "All Subjects",
+    "subject": "Full Length",
     "topic": "Advance Level Test-1 (Full Syllabus)",
     "type": "Full Length",
     "filename": "001_Advance Level Test-1 Full Syllabus GATE 2025 CS.html"
@@ -10,9 +10,25 @@
   {
     "id": "002-adv-test-1-2026",
     "year": 2026,
-    "subject": "All Subjects",
+    "subject": "Full Length",
     "topic": "Advance Level Test-1 (Full Syllabus)",
     "type": "Full Length",
     "filename": "002_Advance Level Test-1 Full Syllabus GATE 2026 CS.html"
+  },
+  {
+    "id": "001-algo-test-1-2026",
+    "year": 2026,
+    "subject": "Algorithm",
+    "topic": "Algorithm (Test-1)",
+    "type": "Syllabus Test",
+    "filename": "Algo 1.html"
+  },
+  {
+    "id": "002-algo-test-2-2026",
+    "year": 2026,
+    "subject": "Algorithm",
+    "topic": "Algorithm (Test-2)",
+    "type": "Syllabus Test",
+    "filename": "Algo 2.html"
   }
 ]

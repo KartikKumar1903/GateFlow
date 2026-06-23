@@ -146,23 +146,7 @@ const buildSchedule = (profile, backlog, taskStatus) => {
   return schedule;
 };
 
-const makePyqQueue = (profile, pyqState) => {
-  const subjects = profile.subjects.filter((subject) => subject.selected);
-  const weakFirst = [...subjects].sort((a, b) => coverageOf(a) - coverageOf(b));
 
-  return pyqYears.slice(0, 4).map((year, index) => {
-    const subject = weakFirst[index % weakFirst.length] || subjects[0];
-    const topic = subject ? firstUncoveredTopic(subject) : "Choose a subject";
-    const key = `${year}-${subject?.name || "subject"}-${topic}`;
-    return {
-      key,
-      year,
-      subject: subject?.name || "Choose subject",
-      topic,
-      status: pyqState[key] || "Not started"
-    };
-  });
-};
 
 function App() {
   const [authMode, setAuthMode] = useState("signup");
@@ -247,7 +231,7 @@ function App() {
     };
     fetchLatestProfile();
   }, [user?.profileId]);
-  const pyqQueue = useMemo(() => (profile ? makePyqQueue(profile, pyqState) : []), [profile, pyqState]);
+
 
   const [quizzes, setQuizzes] = useState([]);
   const [selectedQuizSubject, setSelectedQuizSubject] = useState("All");
@@ -817,89 +801,59 @@ function App() {
       <section className="panel pyq">
         <div className="section-title">
           <div>
-            <p className="eyebrow">PYQ manager</p>
-            <h2>Weak-topic practice queue</h2>
+            <p className="eyebrow">Interactive Test Center</p>
+            <h2>All PYQ Papers ({quizzes.length})</h2>
+          </div>
+          <div className="quiz-filters">
+            <select value={selectedQuizSubject} onChange={(e) => setSelectedQuizSubject(e.target.value)}>
+              <option value="All">All Subjects</option>
+              {Array.from(new Set(quizzes.map((q) => q.subject))).map((sub) => (
+                <option key={sub} value={sub}>{sub}</option>
+              ))}
+            </select>
+            <select value={selectedQuizType} onChange={(e) => setSelectedQuizType(e.target.value)}>
+              <option value="All">All Test Types</option>
+              <option value="Full Length">Full Length</option>
+              <option value="Topic-wise">Topic-wise</option>
+            </select>
           </div>
         </div>
-        <div className="pyq-grid">
-          {pyqQueue.map((item) => (
-            <article key={item.key}>
-              <strong>{item.year}</strong>
-              <h3>{item.subject}</h3>
-              <p>{item.topic}</p>
-              <div className="segmented">
-                {["Not started", "Attempted", "Revisit", "Solved"].map((status) => (
-                  <button
-                    className={item.status === status ? "selected" : ""}
-                    key={status}
-                    onClick={() => savePyq({ ...pyqState, [item.key]: status })}
-                    type="button"
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
 
-        <div style={{ marginTop: "32px", borderTop: "1px solid rgba(90, 110, 103, 0.15)", paddingTop: "24px" }}>
-          <div className="section-title">
-            <div>
-              <p className="eyebrow">Interactive Test Center</p>
-              <h2>All PYQ Papers ({quizzes.length})</h2>
-            </div>
-            <div className="quiz-filters">
-              <select value={selectedQuizSubject} onChange={(e) => setSelectedQuizSubject(e.target.value)}>
-                <option value="All">All Subjects</option>
-                {Array.from(new Set(quizzes.map((q) => q.subject))).map((sub) => (
-                  <option key={sub} value={sub}>{sub}</option>
-                ))}
-              </select>
-              <select value={selectedQuizType} onChange={(e) => setSelectedQuizType(e.target.value)}>
-                <option value="All">All Test Types</option>
-                <option value="Full Length">Full Length</option>
-                <option value="Topic-wise">Topic-wise</option>
-              </select>
-            </div>
-          </div>
-
-          {filteredQuizzes.length === 0 ? (
-            <p className="empty-state">No papers registered in pyqRegistry.json yet. Please check your config.</p>
-          ) : (
-            <div className="pyq-grid">
-              {filteredQuizzes.map((quiz) => {
-                const status = pyqState[quiz.id] || "Not started";
-                return (
-                  <article key={quiz.id}>
-                    <div className="quiz-paper-card">
-                      <div>
-                        <strong>{quiz.year}</strong>
-                        <h3>{quiz.subject}</h3>
-                        <p>{quiz.topic}</p>
-                      </div>
-                      <div className="quiz-card-meta">
-                        <span className={`quiz-badge ${quiz.type === "Full Length" ? "full-length" : ""}`}>
-                          {quiz.type}
-                        </span>
-                        <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: status === "Solved" ? "#1f5f5b" : "#6d7c76" }}>
-                          {status}
-                        </span>
-                      </div>
-                      <button
-                        className="quiz-play-btn"
-                        onClick={() => setActiveQuiz(quiz)}
-                        type="button"
-                      >
-                        <Sparkles size={14} /> Attempt Quiz
-                      </button>
+        {filteredQuizzes.length === 0 ? (
+          <p className="empty-state">No papers registered in pyqRegistry.json yet. Please check your config.</p>
+        ) : (
+          <div className="pyq-grid">
+            {filteredQuizzes.map((quiz) => {
+              const status = pyqState[quiz.id] || "Not started";
+              return (
+                <article key={quiz.id}>
+                  <div className="quiz-paper-card">
+                    <div>
+                      <strong>{quiz.year}</strong>
+                      <h3>{quiz.subject}</h3>
+                      <p>{quiz.topic}</p>
                     </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                    <div className="quiz-card-meta">
+                      <span className={`quiz-badge ${quiz.type === "Full Length" ? "full-length" : ""}`}>
+                        {quiz.type}
+                      </span>
+                      <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: status === "Solved" ? "#1f5f5b" : "#6d7c76" }}>
+                        {status}
+                      </span>
+                    </div>
+                    <button
+                      className="quiz-play-btn"
+                      onClick={() => setActiveQuiz(quiz)}
+                      type="button"
+                    >
+                      <Sparkles size={14} /> Attempt Quiz
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {activeQuiz && (
