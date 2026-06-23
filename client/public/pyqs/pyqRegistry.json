@@ -101,7 +101,7 @@
     "subject": "Digital Logic",
     "topic": "Digital Logic (Test-1)",
     "type": "Syllabus Test",
-    "filename": "Digital Logic 1.html"
+    "filename": "DL1.html"
   },
   {
     "id": "002-digi-test-2-2026",
@@ -109,7 +109,7 @@
     "subject": "Digital Logic",
     "topic": "Digital Logic (Test-2)",
     "type": "Syllabus Test",
-    "filename": "Digital Logic 2.html"
+    "filename": "DL 2.html"
   },
   {
     "id": "001-engg-maths-test-1-2026",
@@ -117,7 +117,7 @@
     "subject": "Engineering Mathematics",
     "topic": "Engineering Mathematics (Test-1)",
     "type": "Syllabus Test",
-    "filename": "Engineering Mathematics 1.html"
+    "filename": "MATH 1.html"
   },
   {
     "id": "002-engg-maths-test-2-2026",
@@ -125,7 +125,7 @@
     "subject": "Engineering Mathematics",
     "topic": "Engineering Mathematics (Test-2)",
     "type": "Syllabus Test",
-    "filename": "Engineering Mathematics 2.html"
+    "filename": "MATH 2.html"
   },
   {
     "id": "001-os-test-1-2026",
@@ -149,7 +149,7 @@
     "subject": "Programming & Data Structures",
     "topic": "Programming & Data Structures (Test-1)",
     "type": "Syllabus Test",
-    "filename": "PLT 1.html"
+    "filename": "DS 1.html"
   },
   {
     "id": "002-plt-test-2-2026",
@@ -157,7 +157,7 @@
     "subject": "Programming & Data Structures",
     "topic": "Programming & Data Structures (Test-2)",
     "type": "Syllabus Test",
-    "filename": "PLT 2.html"
+    "filename": "DS 2.html"
   },
   {
     "id": "001-theory-test-1-2026",
@@ -165,7 +165,7 @@
     "subject": "Theory of Computation",
     "topic": "Theory of Computation (Test-1)",
     "type": "Syllabus Test",
-    "filename": "Theory of Computation 1.html"
+    "filename": "TOC 1.html"
   },
   {
     "id": "002-theory-test-2-2026",
@@ -173,6 +173,6 @@
     "subject": "Theory of Computation",
     "topic": "Theory of Computation (Test-2)",
     "type": "Syllabus Test",
-    "filename": "Theory of Computation 2.html"
+    "filename": "TOC 2.html"
   }
 ]
