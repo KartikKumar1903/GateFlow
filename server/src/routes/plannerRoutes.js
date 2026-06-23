@@ -25,7 +25,12 @@ router.get("/profiles/:id", requireAuth, authorizeProfile, async (req, res) => {
 });
 
 router.put("/profiles/:id", requireAuth, authorizeProfile, async (req, res) => {
-  const profile = await UserProfile.findByIdAndUpdate(req.params.id, req.body, { new: true });
+  const profile = await UserProfile.findById(req.params.id);
+  if (!profile) {
+    return res.status(404).json({ message: "Profile not found." });
+  }
+  Object.assign(profile, req.body);
+  await profile.save();
   res.json(profile);
 });
 

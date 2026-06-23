@@ -45,6 +45,13 @@ const userProfileSchema = new mongoose.Schema(
 
 userProfileSchema.pre("save", function (next) {
   this.updatedTime = getISTTimestamp();
+  if (this.subjects && Array.isArray(this.subjects)) {
+    this.subjects.forEach((subject) => {
+      const totalTopics = subject.topics ? subject.topics.length : 0;
+      const completedCount = subject.completedTopics ? subject.completedTopics.length : 0;
+      subject.coverage = totalTopics > 0 ? Math.round((completedCount / totalTopics) * 100) : 0;
+    });
+  }
   next();
 });
 

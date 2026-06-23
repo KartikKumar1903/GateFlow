@@ -365,12 +365,16 @@ function App() {
 
   const setTopicProgress = (subjectName, topic, status) => {
     const subject = profile.subjects.find((item) => item.name === subjectName);
+    const completedTopics =
+      status === "Covered"
+        ? Array.from(new Set([...subject.completedTopics, topic]))
+        : subject.completedTopics.filter((item) => item !== topic);
+    const coverage = Math.round((completedTopics.length / Math.max(subject.topics.length, 1)) * 100);
+
     updateSubject(subjectName, {
       topicProgress: { ...(subject.topicProgress || {}), [topic]: status },
-      completedTopics:
-        status === "Covered"
-          ? Array.from(new Set([...subject.completedTopics, topic]))
-          : subject.completedTopics.filter((item) => item !== topic)
+      completedTopics,
+      coverage
     });
 
     if (status === "Covered") {
@@ -439,26 +443,36 @@ function App() {
     const completedTasks = schedule.filter((item) => item.completed);
 
     let nextBacklog = [...backlog];
-
     let nextProfile = { ...profile };
     let profileUpdated = false;
 
     if (completedTasks.length > 0) {
+      const updatedSubjects = [...nextProfile.subjects];
       completedTasks.forEach(task => {
         nextBacklog = nextBacklog.filter(b => !(b.subject === task.subject && b.topic === task.topic));
         
-        const subjectIndex = nextProfile.subjects.findIndex(s => s.name === task.subject);
+        const subjectIndex = updatedSubjects.findIndex(s => s.name === task.subject);
         if (subjectIndex !== -1) {
-          const subject = nextProfile.subjects[subjectIndex];
+          const subject = updatedSubjects[subjectIndex];
           if (!subject.completedTopics.includes(task.topic)) {
-            nextProfile.subjects[subjectIndex] = {
+            const newCompletedTopics = [...subject.completedTopics, task.topic];
+            const newCoverage = Math.round((newCompletedTopics.length / Math.max(subject.topics.length, 1)) * 100);
+            updatedSubjects[subjectIndex] = {
               ...subject,
-              completedTopics: [...subject.completedTopics, task.topic]
+              completedTopics: newCompletedTopics,
+              coverage: newCoverage,
+              topicProgress: {
+                ...(subject.topicProgress || {}),
+                [task.topic]: "Covered"
+              }
             };
             profileUpdated = true;
           }
         }
       });
+      if (profileUpdated) {
+        nextProfile.subjects = updatedSubjects;
+      }
     }
 
     if (profileUpdated) saveProfile(nextProfile);
@@ -1062,12 +1076,16 @@ function OnboardingScreen({ user, saveProfile, initialProfile, cancel }) {
 
   const setTopicProgress = (subjectName, topic, status) => {
     const subject = subjects.find((item) => item.name === subjectName);
+    const completedTopics =
+      status === "Covered"
+        ? Array.from(new Set([...subject.completedTopics, topic]))
+        : subject.completedTopics.filter((item) => item !== topic);
+    const coverage = Math.round((completedTopics.length / Math.max(subject.topics.length, 1)) * 100);
+
     updateSubject(subjectName, {
       topicProgress: { ...(subject.topicProgress || {}), [topic]: status },
-      completedTopics:
-        status === "Covered"
-          ? Array.from(new Set([...subject.completedTopics, topic]))
-          : subject.completedTopics.filter((item) => item !== topic)
+      completedTopics,
+      coverage
     });
   };
 
