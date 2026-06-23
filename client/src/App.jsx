@@ -444,40 +444,12 @@ function App() {
     const completedTasks = schedule.filter((item) => item.completed);
 
     let nextBacklog = [...backlog];
-    let nextProfile = { ...profile };
-    let profileUpdated = false;
 
     if (completedTasks.length > 0) {
-      const updatedSubjects = [...nextProfile.subjects];
       completedTasks.forEach(task => {
         nextBacklog = nextBacklog.filter(b => !(b.subject === task.subject && b.topic === task.topic));
-        
-        const subjectIndex = updatedSubjects.findIndex(s => s.name === task.subject);
-        if (subjectIndex !== -1) {
-          const subject = updatedSubjects[subjectIndex];
-          // Only add the topic if it actually exists in the subject's topics list (e.g. avoid adding "Revision + PYQs")
-          if (subject.topics.includes(task.topic) && !subject.completedTopics.includes(task.topic)) {
-            const newCompletedTopics = [...subject.completedTopics, task.topic];
-            const newCoverage = Math.min(100, Math.round((newCompletedTopics.length / Math.max(subject.topics.length, 1)) * 100));
-            updatedSubjects[subjectIndex] = {
-              ...subject,
-              completedTopics: newCompletedTopics,
-              coverage: newCoverage,
-              topicProgress: {
-                ...(subject.topicProgress || {}),
-                [task.topic]: "Covered"
-              }
-            };
-            profileUpdated = true;
-          }
-        }
       });
-      if (profileUpdated) {
-        nextProfile.subjects = updatedSubjects;
-      }
     }
-
-    if (profileUpdated) saveProfile(nextProfile);
 
     if (missed.length > 0) {
       const newBacklogItems = missed.map((item) => ({
